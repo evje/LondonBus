@@ -23,6 +23,11 @@ namespace LondonBus.Controllers
             return View();
         }
 
+        /// <summary>
+        /// This method is used to make a list of stop's names for autocompleting
+        /// </summary>
+        /// <param name="term">First letters of stop's name</param>
+        /// <returns></returns>
         public ActionResult AutocompleteSearch(string term)
         {
             IList<string> stopNames = _initializingBusStopInfoDownloader.AllBusStopInfo.Select(n => (string)n["commonName"]).Distinct().ToList();
@@ -32,19 +37,24 @@ namespace LondonBus.Controllers
             return Json(stops, JsonRequestBehavior.AllowGet);
         }
 
+        /// <summary>
+        /// This method returns a list of strings with info about bus schedule arround the only stoppoint
+        /// </summary>
+        /// <param name="stopName">stoppoint name</param>
+        /// <returns></returns>
         public ActionResult FindArrivalsAtBusStop(string stopName)
         {
             IList<string> stopNames = _initializingBusStopInfoDownloader.AllBusStopInfo.Select(n => (string)n["commonName"]).Distinct().ToList();
 
-            if (stopNames.Select(z => z.ToUpperInvariant()).Contains(stopName))
+            if (stopNames.Select(z => z.ToUpperInvariant()).Contains(stopName.ToUpperInvariant()))
             {
-                string naptanId = _initializingBusStopInfoDownloader.AllBusStopInfo.Where(n => (((string)n["commonName"]).ToUpperInvariant() == stopName)).Select(n => (string)n["naptanId"]).FirstOrDefault();
+                string naptanId = _initializingBusStopInfoDownloader.AllBusStopInfo.Where(n => (((string)n["commonName"]).ToUpperInvariant() == stopName.ToUpperInvariant())).Select(n => (string)n["naptanId"]).FirstOrDefault();
 
                 string urlFirstPart = "https://api.tfl.gov.uk/StopPoint/";
                 string urlLastPart = "/arrivals";
                 string urlFull = urlFirstPart + naptanId + urlLastPart;
 
-                JArray oneStopArivings;
+                JArray oneStopArivings = null;
                 using (var oneStopWebClient = new WebClient())
                 {
                     var onestopinfoMemoryStream = new MemoryStream(oneStopWebClient.DownloadData(urlFull));
@@ -52,24 +62,41 @@ namespace LondonBus.Controllers
                     var onestopinfo = (JArray)JToken.ReadFrom(new JsonTextReader(onestopreader));
                     oneStopArivings = onestopinfo;
                 }
-                IList<string> lineName = oneStopArivings.Select(a => (string)a["lineName"]).ToList();
-                IList<string> direction = oneStopArivings.Select(a => (string)a["direction"]).ToList();
-                IList<string> timeToStation = oneStopArivings.Select(a => (string)a["timeToStation"]).ToList();
-                IList<string> modeName = oneStopArivings.Select(a => (string)a["modeName"]).ToList();
-                int capForShownInfo = lineName.Count();
-                List<string> shownInfo = new List<string>(capForShownInfo);
-
-                for (int i = 0; i < capForShownInfo; i++)
+                if (oneStopArivings != null)
                 {
-                    shownInfo.Add(direction[i] + " " + modeName[i] + " " + lineName[i] + " " + " arriving at "
-                    + String.Format("{0:00} min. {1} sec.", (Int32.Parse(timeToStation[i]) / 60),
-                    (Int32.Parse(timeToStation[i]) - (60 * (Int32.Parse(timeToStation[i]) / 60)))));
+                    IList<string> lineName = oneStopArivings.Select(a => (string)a["lineName"]).ToList();
+                    IList<string> direction = oneStopArivings.Select(a => (string)a["direction"]).ToList();
+                    IList<string> timeToStation = oneStopArivings.Select(a => (string)a["timeToStation"]).ToList();
+                    IList<string> modeName = oneStopArivings.Select(a => (string)a["modeName"]).ToList();
+                    int capForShownInfo = lineName.Count();
+                    List<string> shownInfo = new List<string>(capForShownInfo);
+
+                    for (int i = 0; i < capForShownInfo; i++)
+                    {
+                        shownInfo.Add(direction[i] + " " + modeName[i] + " " + lineName[i] + " " + " arriving at "
+                        + String.Format("{0:00} min. {1} sec.", (Int32.Parse(timeToStation[i]) / 60),
+                        (Int32.Parse(timeToStation[i]) - (60 * (Int32.Parse(timeToStation[i]) / 60)))));
+                    }
+                    shownInfo.Sort();
+                    ViewData["StopName"] = stopName;
+                    if (shownInfo.Count > 0)
+                    {
+                        return View(shownInfo);
+                    }
+                    else
+                    {
+                        String message = "There are no busses now";
+                        shownInfo.Add(message);
+                        return View(shownInfo);
+                    }
+                }
+                else
+                {
+                    TempData["warning"] = "Be careful, when tiping StopName. Better choose it from list below.";
+                    return View("Index");
                 }
 
-                shownInfo.Sort();
-                ViewData["StopName"] = stopName;
 
-                return View(shownInfo);
             }
             else
             {
