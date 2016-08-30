@@ -13,4 +13,10 @@
 
 <p>
     @Html.ActionLink("Choose new stop", "Index")
+    
 </p>
+@using (Html.BeginForm("FindArrivalsAtBusStop", "Home"))
+{
+    <input type="hidden" id="stopName" name="stopName" value="@ViewData["StopName"]" />
+    <input type="submit" value="Refresh" />
+}
