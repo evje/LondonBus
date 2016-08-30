@@ -1,0 +1,16 @@
+﻿@{
+    ViewBag.Title = "Schedule";
+}
+
+<h2>London Busses Schedule at <b>@ViewData["StopName"]</b></h2>
+
+@foreach (var p in Model)
+{
+    <p>@p</p>
+}
+
+<br />
+
+<p>
+    @Html.ActionLink("Choose new stop", "Index")
+</p>

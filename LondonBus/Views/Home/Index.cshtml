@@ -1,0 +1,21 @@
+﻿@{
+    ViewBag.Title = "London Busses Schedule";
+    @TempData["warning"]
+}
+
+<h2>Here You can find bus' schedule at choosen stop</h2>
+
+@using (Html.BeginForm("FindArrivalsAtBusStop", "Home"))
+{
+    <fieldset>
+        <b>Please, type the stop's name or choose it in list below: </b>
+        <input type="text" id="stopName" name="stopName" data-autocomplete-source="@Url.Action("AutocompleteSearch", "Home")" />
+        <input type="submit" value="Find It!" />
+    </fieldset>
+}
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryui")
+    <script type="text/javascript" src="@Url.Content("~/Scripts/myscripts/livesearching.js")"></script>
+}
+@Styles.Render("~/Content/themes/base/css")
